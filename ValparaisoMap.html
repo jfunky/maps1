@@ -1,0 +1,52 @@
+<!--  The most basic web map. -->
+
+<!DOCTYPE html>
+<!-- Leaflet Guide: http://leafletjs.com/examples/quick-start.html -->
+
+<html lang="en">
+<head>
+	<style type="text/css">
+	body { margin:0; padding: 0; height: 100%;}
+	html{ position:absolute; top:0; bottom:0; width:100%;}
+	#map {
+		height: 100%;
+	}
+	</style>
+
+	<title> Base Layer </title>
+
+	<!-- Leaflet -->
+	<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+	<script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+</head>
+
+<body>
+	<div id="map"></div>
+	<script>
+
+	// CARTODB MAP 
+	var layer = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+	  attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
+	});
+
+	var map = L.map('map', {
+	  scrollWheelZoom: false,
+	  center: [-33.040790, -71.519658],
+	  zoom: 12
+	});
+
+	map.addLayer(layer);
+
+	// Pablo Neruda's house - La Sebastiana
+	var sebastiana = L.marker([-33.0542850,-71.6226610]).addTo(map);
+
+ 	sebastiana.bindPopup("<b>La Sebastiana</b><br>Pablo Neruda's House").openPopup();
+
+	var gma = L.marker([-33.0302130,-71.5365880]).addTo(map);
+
+ 	gma.bindPopup("<b>Grandma's House</b><br>Whiskey & Empanadas").openPopup();
+
+-33.0302130,-71.5365880
+	</script>
+</body>
+</html>
