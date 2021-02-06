@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset=utf-8 />
+    <title>NYC Recycling</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.mapbox.com/mapbox.js/v2.3.0/mapbox.js'></script>
+      <!-- This line allows us to pull in Leaflet Omnivore plugin -->
+    <script src='//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.2.0/leaflet-omnivore.min.js'></script>
+    <script type="text/javascript" src="data/nycDistMerged.js"></script>
+    <script type="text/javascript" src="data/landfills.js"></script>
+    <script type="text/javascript" src="data/states.js"></script>
+    <script type="text/javascript" src="data/boroughs.js"></script>
+    <script type="text/javascript" src="data/nyc_network.js"></script>
+    <link href='https://api.mapbox.com/mapbox.js/v2.3.0/mapbox.css' rel='stylesheet' />
+    <link rel="stylesheet" href="styles.css" />
+    <link href='https://fonts.googleapis.com/css?family=Gentium+Book+Basic' rel='stylesheet' type='text/css'>
+  </head>
+  <body>
+
+    <h1 id="title">NYC Recycling Diversion Rate in 2015</h1>
+    <div class="container">
+      <div id="map"></div>
+    </div>
+    <div class="container" id="source">
+      Data Sources: <br><br>NYC Community Districts and Joint Interest Areas geographies are from <a href="nyc.gov">nyc.gov</a>.
+      Joint Interest areas, (JIAs) are "public parks, waterways, major governmental installations and similar
+      land uses which are not located within bounding community districts. Examples are Central Park, Van Cortlandt Park",
+      and airports. These areas did not have DSNY collection data. <br><br>
+      State geographies are from <a href="https://github.com/johan/world.geo.json/tree/master/countries/USA">@johan's world.geo.json github page</a>.
+      <br><br>
+      Collection and Disposal Network data are from the NYC Department of Sanitation, released through
+      <a href="https://data.cityofnewyork.us/City-Government/DSNY-Monthly-Tonnage-Data/ebb7-mvp5NYC">NYC Open Data</a>, as
+      of the February 2016 update. Tonnage Collection data were aggregated from the district-month level to the
+      district-level for 2015. <br><br>
+      Landfill/disposal locations were based on
+      <a href="https://citylimits.org/2015/05/22/life-near-a-landfill-the-towns-and-people-who-end-up-with-nycs-trash/">a list from CityLimits.org</a>
+      and verfied through Google.
+      Based on these searches, I found that the geolocated addresses of landfills were actually sometimes the disposal
+      company’s office rather than the landfill itself. I included these for now anyway, since I think they are still
+      demonstrative of the distance NYC trash is transported.
+      <br><br>
+      <div id="space">
+      </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+
+    // bring in mapbox tiles
+    L.mapbox.accessToken = 'pk.eyJ1IjoiamFzOTIwIiwiYSI6ImNpa2x2bXNlcTBsdWV2MGttZGFiNWcyNmkifQ.qcQ9_ffMBWKLqYSK5ISXwQ';
+    // Replace 'mapbox.streets' with your map id.
+    var mapboxTiles = L.tileLayer('https://api.mapbox.com/v4/jas920.421ba6e0/{z}/{x}/{y}.png?access_token=' + L.mapbox.accessToken, {
+        attribution: '© <a href="https://www.mapbox.com/map-feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    });
+
+    var map = L.map('map')
+        .addLayer(mapboxTiles)
+        .setView([40.7043940,-73.9623160], 11);
+
+    //borough outline
+    boroStyle = {
+      	weight: 3,
+        color: "#08306b",
+        opacity: 100,
+        fillOpacity: 0
+    }
+
+    var boros = L.geoJson(nycBoro, {
+        style: boroStyle,
+      }).addTo(map);
+
+    //states where nyc sends garbage
+    stateStyle = {
+    	weight: .05,
+      color: "#000000",
+      opacity: 20,
+    }
+
+    var myStates = L.geoJson(states, {
+        style: stateStyle,
+      }).addTo(map);
+
+
+    //disposal network styling
+    function onEachFeature1(feature, layer) {
+        if (feature.properties && feature.properties.Material) {
+            layer.bindPopup("<b>" + feature.properties.Primary_Disposal_Facility + "</b>" + "<br>" + feature.properties.Material + " disposal center" );
+        }
+    }
+
+    var geoJson_disp = L.geoJson(disposal_locations, {
+    	onEachFeature: onEachFeature1,
+        pointToLayer: L.mapbox.marker.style,
+        style: function(feature) { return feature.properties; }
+    }).addTo(map);
+
+
+    //Landfills/Destinations
+    function onEachFeature2(feature, layer) {
+        if (feature.properties && feature.properties.Facility) {
+            layer.bindPopup("<b>" + feature.properties.Facility + "</b><br>" + "NYC Refuse Destination <br>");
+        }
+    }
+
+    var geoJson_LF = L.geoJson(NYCLandfills, {
+    	onEachFeature: onEachFeature2,
+        pointToLayer: L.mapbox.marker.style,
+        style: function(feature) { return feature.properties; }
+    }).addTo(map);
+
+
+    // get color of community districts depending on garbageee
+    function getColor(d) {
+    	// condition ? do-this-if-true : do-this-if-false
+    	return d > 30  ? '#252525' :
+    		   d > 20  ? '#737373' :
+    		   d > 10  ? '#bdbdbd' :
+    		   d > 0   ? '#f0f0f0' :
+    					 'white' ;
+    }
+
+    function style(feature) {
+    	return {
+    		weight: .05,
+    		opacity: .65,
+    		color: 'white',
+    		fillOpacity: .80,
+    		// Below is where we call in the density numbers from the geojson
+    		fillColor: getColor(feature.properties.DIVERSION_CALC)
+    		};
+    }
+
+    function highlightFeature(e) {
+    	var layer = e.target;
+    		layer.setStyle({
+    		weight: 3,
+    		color: "#00133D",
+    		//dashArray: '3',
+    		fillOpacity: .85
+    	});
+    	// This is where data changes dependent on the CD
+    	info.update(layer.feature.properties);
+    }
+
+    var geojson;
+
+    function resetHighlight(e) {
+    			geojson.resetStyle(e.target);
+    }
+
+    function onEachFeature(feature, layer) {
+    	layer.on({
+    	mouseover: highlightFeature, //on mouseover, call this function
+    	mouseout: resetHighlight, // on mouseout, call this function
+
+    	});
+    }
+
+    var geojson = L.geoJson(communityDistricts, {
+    	style: style,
+    	onEachFeature: onEachFeature
+    }).addTo(map);
+
+    var info = L.control();
+
+    // add info
+    info.onAdd = function (map) {
+    	this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+    	this.update();
+    	return this._div;
+    };
+
+    // method that we will use to update the control based on feature properties passed
+    info.update = function (props) {
+    	this._div.innerHTML = '<b> Collection per capita</b><br></br>' +  (props ?
+    		'Diversion rate: ' + props.DIVERSION_CALC + ' %</sup>' +
+    		'<br></br>' + 'Metal, Glass, & Plastic'  + ':  ' + props.MGP_lbss_per_capita + ' lbs</sup>' +
+    		'<br>' + 'Paper: '  + props.PAPERCOLLECTED_percapita + ' lbs</sup>' +
+    		'<br>' + 'Refuse: ' + props.REFUSECOLLECTED_percapita + ' lbs</sup>' +
+    		'<br></br>' + 'Total: ' + props.total_per_capita + ' lbs</sup>'
+    		: 'Hover over a Community District');
+    };
+    info.addTo(map);
+
+
+    // legend
+    var legend = L.control({position: 'bottomright'});
+
+    legend.onAdd = function (map) {
+
+      var div = L.DomUtil.create('div', 'info legend'),
+      grades = [0, 10,  20, 30],
+      labels = [];
+
+      // loop through our density intervals and generate a label with a colored square for each interval
+      for (var i = 0; i < grades.length; i++) {
+        div.innerHTML +=
+       	'<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+        grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+      }
+
+      return div;
+    };
+
+    legend.addTo(map);
+
+    </script>
+  </body>
+</html>
