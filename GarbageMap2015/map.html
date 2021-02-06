@@ -49,18 +49,21 @@
 
     // bring in mapbox tiles
     L.mapbox.accessToken = 'pk.eyJ1IjoiamFzOTIwIiwiYSI6ImNpa2x2bXNlcTBsdWV2MGttZGFiNWcyNmkifQ.qcQ9_ffMBWKLqYSK5ISXwQ';
-    // Replace 'mapbox.streets' with your map id.
-    var mapboxTiles = L.tileLayer('https://api.mapbox.com/v4/jas920.421ba6e0/{z}/{x}/{y}.png?access_token=' + L.mapbox.accessToken, {
-        attribution: '© <a href="https://www.mapbox.com/map-feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    });
 
-    var map = L.map('map')
-        .addLayer(mapboxTiles)
-        .setView([40.7043940,-73.9623160], 11);
+    // use generic tiles after mine stopped working
+    let map = L.map('map',{
+                center: [40.7043940,-73.9623160],
+                zoom: 11
+            })
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v10/tiles/{z}/{x}/{y}?access_token=' + L.mapbox.accessToken, {
+              attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+              maxZoom: 18
+          }).addTo(map)
 
     //borough outline
     boroStyle = {
-      	weight: 3,
+        weight: 3,
         color: "#08306b",
         opacity: 100,
         fillOpacity: 0
@@ -72,7 +75,7 @@
 
     //states where nyc sends garbage
     stateStyle = {
-    	weight: .05,
+      weight: .05,
       color: "#000000",
       opacity: 20,
     }
@@ -90,7 +93,7 @@
     }
 
     var geoJson_disp = L.geoJson(disposal_locations, {
-    	onEachFeature: onEachFeature1,
+      onEachFeature: onEachFeature1,
         pointToLayer: L.mapbox.marker.style,
         style: function(feature) { return feature.properties; }
     }).addTo(map);
@@ -104,7 +107,7 @@
     }
 
     var geoJson_LF = L.geoJson(NYCLandfills, {
-    	onEachFeature: onEachFeature2,
+      onEachFeature: onEachFeature2,
         pointToLayer: L.mapbox.marker.style,
         style: function(feature) { return feature.properties; }
     }).addTo(map);
@@ -112,74 +115,74 @@
 
     // get color of community districts depending on garbageee
     function getColor(d) {
-    	// condition ? do-this-if-true : do-this-if-false
-    	return d > 30  ? '#252525' :
-    		   d > 20  ? '#737373' :
-    		   d > 10  ? '#bdbdbd' :
-    		   d > 0   ? '#f0f0f0' :
-    					 'white' ;
+      // condition ? do-this-if-true : do-this-if-false
+      return d > 30  ? '#252525' :
+           d > 20  ? '#737373' :
+           d > 10  ? '#bdbdbd' :
+           d > 0   ? '#f0f0f0' :
+               'white' ;
     }
 
     function style(feature) {
-    	return {
-    		weight: .05,
-    		opacity: .65,
-    		color: 'white',
-    		fillOpacity: .80,
-    		// Below is where we call in the density numbers from the geojson
-    		fillColor: getColor(feature.properties.DIVERSION_CALC)
-    		};
+      return {
+        weight: .05,
+        opacity: .65,
+        color: 'white',
+        fillOpacity: .80,
+        // Below is where we call in the density numbers from the geojson
+        fillColor: getColor(feature.properties.DIVERSION_CALC)
+        };
     }
 
     function highlightFeature(e) {
-    	var layer = e.target;
-    		layer.setStyle({
-    		weight: 3,
-    		color: "#00133D",
-    		//dashArray: '3',
-    		fillOpacity: .85
-    	});
-    	// This is where data changes dependent on the CD
-    	info.update(layer.feature.properties);
+      var layer = e.target;
+        layer.setStyle({
+        weight: 3,
+        color: "#00133D",
+        //dashArray: '3',
+        fillOpacity: .85
+      });
+      // This is where data changes dependent on the CD
+      info.update(layer.feature.properties);
     }
 
     var geojson;
 
     function resetHighlight(e) {
-    			geojson.resetStyle(e.target);
+          geojson.resetStyle(e.target);
     }
 
     function onEachFeature(feature, layer) {
-    	layer.on({
-    	mouseover: highlightFeature, //on mouseover, call this function
-    	mouseout: resetHighlight, // on mouseout, call this function
+      layer.on({
+      mouseover: highlightFeature, //on mouseover, call this function
+      mouseout: resetHighlight, // on mouseout, call this function
 
-    	});
+      });
     }
 
     var geojson = L.geoJson(communityDistricts, {
-    	style: style,
-    	onEachFeature: onEachFeature
+      style: style,
+      onEachFeature: onEachFeature
     }).addTo(map);
 
     var info = L.control();
 
     // add info
     info.onAdd = function (map) {
-    	this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
-    	this.update();
-    	return this._div;
+      this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+      this.update();
+      return this._div;
     };
 
     // method that we will use to update the control based on feature properties passed
     info.update = function (props) {
-    	this._div.innerHTML = '<b> Collection per capita</b><br></br>' +  (props ?
-    		'Diversion rate: ' + props.DIVERSION_CALC + ' %</sup>' +
-    		'<br></br>' + 'Metal, Glass, & Plastic'  + ':  ' + props.MGP_lbss_per_capita + ' lbs</sup>' +
-    		'<br>' + 'Paper: '  + props.PAPERCOLLECTED_percapita + ' lbs</sup>' +
-    		'<br>' + 'Refuse: ' + props.REFUSECOLLECTED_percapita + ' lbs</sup>' +
-    		'<br></br>' + 'Total: ' + props.total_per_capita + ' lbs</sup>'
-    		: 'Hover over a Community District');
+      this._div.innerHTML = '<b> Collection per capita</b><br></br>' +  (props ?
+        'Diversion rate: ' + props.DIVERSION_CALC + ' %</sup>' +
+        '<br></br>' + 'Metal, Glass, & Plastic'  + ':  ' + props.MGP_lbss_per_capita + ' lbs</sup>' +
+        '<br>' + 'Paper: '  + props.PAPERCOLLECTED_percapita + ' lbs</sup>' +
+        '<br>' + 'Refuse: ' + props.REFUSECOLLECTED_percapita + ' lbs</sup>' +
+        '<br></br>' + 'Total: ' + props.total_per_capita + ' lbs</sup>'
+        : 'Hover over a Community District');
     };
     info.addTo(map);
 
@@ -196,7 +199,7 @@
       // loop through our density intervals and generate a label with a colored square for each interval
       for (var i = 0; i < grades.length; i++) {
         div.innerHTML +=
-       	'<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+        '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
         grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
       }
 
